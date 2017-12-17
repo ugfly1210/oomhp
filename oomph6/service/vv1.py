@@ -35,21 +35,33 @@ class Oomph6Config:
         :param kwargs:
         :return:
         '''
+        '''处理表头'''
+        head_list = []
+        for field_name in self.list_display:
+            if isinstance(field_name,str):
+                '''根据类和字段名称来获取字段对象的verbose_name'''
+                # verborse_name = self.model_class._meta.get_field(field_name) # 可拿到对象
+                verborse_name = self.model_class._meta.get_field(field_name).verbose_name
+            else:
+                verborse_name=field_name(self,is_header=True)
+            head_list.append(verborse_name)
+
+        '''处理表中数据'''
         data_list = self.model_class.objects.all()
         new_data_list = []
         # list_display = ['id','name']  # 每一个元素都是表里面的字段名
-        for row in data_list:   #每一个row是一个对象
+        for row in data_list:   # 每一个row是一个对象
             temp = []
             for field_name in self.list_display:
                 if isinstance(field_name,str):  # 如果是字符串
-                    # temp.append(getattr(field_name,row))   # 这步很骚哦.  !!反射!!
+                      # temp.append(getattr(field_name,row))   # 这步很骚哦.  !!反射!!
                     val = getattr(row,field_name)   # 这步很骚哦.  !!反射!!
                 else: # 如果是函数
-                    # temp.append(field_name(self,row))      # 第一个参数是本身自己的,第二个参数代指对象,是从41行拿的
+                      # temp.append(field_name(self,row))      # 第一个参数是本身自己的,第二个参数代指对象,是从41行拿的
                     val = field_name(self,row)      # 第一个参数是本身自己的,第二个参数代指对象,是从41行拿的
                 temp.append(val)
             new_data_list.append(temp)
-        return render(request,'oomph6/changelist.html',{'data_list':new_data_list})
+        return render(request,'oomph6/changelist.html',{'data_list':new_data_list,'head_list':head_list})
 
     def add_view(self,request,*args,**kwargs):
         return HttpResponse('add_view')

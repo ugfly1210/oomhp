@@ -10,7 +10,13 @@
 <div class="container">
 <h2 class="text-center">列表页面</h2>
     <table class="table table-bordered">
-        <thead></thead>
+        <thead>
+        <tr>
+        {% for item in head_list %}
+            <th>{{ item }}</th>
+        {% endfor %}
+        </tr>
+        </thead>
         <tbody>
         {% for data in data_list %}
             <tr>
