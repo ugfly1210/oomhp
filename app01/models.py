@@ -4,11 +4,8 @@ from django.db import models
 
 class Role(models.Model):
     name = models.CharField(verbose_name='角色名称',max_length=32)
-
     def __str__(self):
         return self.name
-
-
 
 class UserInfo(models.Model):
     # xxxid = models.IntegerField(primary_key=Tr)
@@ -24,8 +21,6 @@ class UserType(models.Model):
 
     def __str__(self):
         return self.xxx
-
-
 
 class Host(models.Model):
     hostname = models.CharField(verbose_name='主机名',max_length=32)

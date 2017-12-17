@@ -1,0 +1,28 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{% static 'oomph6/bootstrap/css/bootstrap.min.css' %}" />
+</head>
+<body>
+<div class="container">
+<h2 class="text-center">列表页面</h2>
+    <table class="table table-bordered">
+        <thead></thead>
+        <tbody>
+        {% for data in data_list %}
+            <tr>
+                {% for col in data %}
+                    <td>{{ col }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
