@@ -1,13 +1,42 @@
 from django.conf.urls import url
 from django.shortcuts import HttpResponse,render,redirect
+from django.utils.safestring import mark_safe
+
 
 class Oomph6Config:
     def __init__(self,model_class,site):
         self.model_class = model_class
         self.site = site
         print('site===',site)  # site=== <oomph6.service.vv1.Oomph6Site object at 0x103e3ca20>
+    '''11-37 实现默认显示 编辑,选择,删除'''
+    def edit(self,obj=None,is_header=False):
+        # 这个obj对应for row in data_list 中的row
+        # 写obj=None,是因为 表头中不需要obj,所以为了避免报错,默认为None
+        if is_header:
+            return '编辑'
+        return mark_safe('<a href="/edit/%s">编辑</a>'%obj.id)
+
+    def checkbox(self,obj=None,is_header=False):
+        if is_header:
+            return '选择'  # 表头
+        return mark_safe('<input type="checkbox" name="pk" value="%s" />'%obj.id) # 表中数据
+
+    def delete(self,obj=None,is_header=False):
+        if is_header:
+            return '删除'
+        return mark_safe('<a href="/delete/%s">删除</a>'%obj.id)
 
     list_display = []
+    def get_list_display(self):
+        data = [] # 为什么加data???   只能调用该方法才能拿.  你不加data,直接用list_display试一试
+                  # 每次请求进来,都会新生成一个空列表
+        if self.list_display:
+            data.extend(self.list_display)
+            data.append(Oomph6Config.edit)
+            data.append(Oomph6Config.delete)       # 对象调函数是方法, 类调函数 是函数
+            data.insert(0,Oomph6Config.checkbox)   # 这是函数哦,不是方法,记得要手动传self
+        return data
+
 
     def get_urls(self):
         app_model_name = self.model_class._meta.app_label,self.model_class._meta.model_name
@@ -18,7 +47,6 @@ class Oomph6Config:
             url(r'^edit/(\d+)/$',self.edit_view,name='%s_%s_edit'%(app_model_name)),
         ]
         return url_patterns
-
 
     @property
     def urls(self):
@@ -37,7 +65,7 @@ class Oomph6Config:
         '''
         '''处理表头'''
         head_list = []
-        for field_name in self.list_display:
+        for field_name in self.get_list_display():
             if isinstance(field_name,str):
                 '''根据类和字段名称来获取字段对象的verbose_name'''
                 # verborse_name = self.model_class._meta.get_field(field_name) # 可拿到对象
@@ -52,12 +80,12 @@ class Oomph6Config:
         # list_display = ['id','name']  # 每一个元素都是表里面的字段名
         for row in data_list:   # 每一个row是一个对象
             temp = []
-            for field_name in self.list_display:
-                if isinstance(field_name,str):  # 如果是字符串
-                      # temp.append(getattr(field_name,row))   # 这步很骚哦.  !!反射!!
-                    val = getattr(row,field_name)   # 这步很骚哦.  !!反射!!
+            for field_name in self.get_list_display():
+                if isinstance(field_name,str):
+                      # temp.append(getattr(field_name,row))
+                    val = getattr(row,field_name)   # 这步很骚哦.!!反射!!
                 else: # 如果是函数
-                      # temp.append(field_name(self,row))      # 第一个参数是本身自己的,第二个参数代指对象,是从41行拿的
+                      # temp.append(field_name(self,row))
                     val = field_name(self,row)      # 第一个参数是本身自己的,第二个参数代指对象,是从41行拿的
                 temp.append(val)
             new_data_list.append(temp)
@@ -69,7 +97,6 @@ class Oomph6Config:
         return HttpResponse('edit_view')
     def delete_view(self,request,nid,*args,**kwargs):
         return HttpResponse('delete_view')
-
 
 
 class Oomph6Site:
@@ -88,7 +115,6 @@ class Oomph6Site:
 
     def get_urls(self):
         url_pattern = []
-
         for model_class,oomph6_config_obj in self._registry.items():
             '''
             为每一个类,创建4个url
