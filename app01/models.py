@@ -8,7 +8,6 @@ class Role(models.Model):
         return self.name
 
 class UserInfo(models.Model):
-    # xxxid = models.IntegerField(primary_key=Tr)
     name = models.CharField(verbose_name='用户名称',max_length=32)
     email = models.EmailField(verbose_name='邮箱',max_length=32)
     pwd = models.CharField(verbose_name='密码',max_length=32)

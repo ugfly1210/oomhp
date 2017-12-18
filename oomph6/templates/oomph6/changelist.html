@@ -3,35 +3,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Title</title>
-    <link rel="stylesheet" href="{% static 'oomph6/bootstrap/css/bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static "oomph6/bootstrap/css/bootstrap.css" %}" />
 </head>
 <body>
-<div class="container">
-<h2 class="text-center">列表页面</h2>
-    <table class="table table-bordered">
+    <div class="container">
+    <h2>列表页面</h2>
+
     {% if show_add_btn %}
-        <a href="{{ add_url }}" class="btn btn-primary">添加</a>
+        <a class="btn btn-primary" href="{{ add_url }}">添加</a>
     {% endif %}
+    <table class="table table-bordered">
         <thead>
-        <tr>
-        {% for item in head_list %}
-            <th>{{ item }}</th>
-        {% endfor %}
-        </tr>
-        </thead>
-        <tbody>
-        {% for data in data_list %}
             <tr>
-                {% for col in data %}
-                    <td>{{ col }}</td>
+                {% for item in head_list %}
+                    <th>{{ item }}</th>
                 {% endfor %}
             </tr>
-        {% endfor %}
-
+        </thead>
+        <tbody>
+            {% for obj in data_list %}
+                <tr>
+                    {% for col in obj %}
+                        <td>{{ col }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
         </tbody>
     </table>
-</div>
-
+    </div>
 </body>
 </html>

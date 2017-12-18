@@ -42,7 +42,20 @@ class Oomph6Config:
     show_add_btn = True
     def get_add_btn(self):
         return self.show_add_btn
-
+    # 3. model_form_class
+    model_form_class = None
+    def get_model_form_class(self):
+        if self.model_form_class:
+            return self.model_form_class
+        '''第一种使用继承ModelForm来创建类'''
+        # class TestModelForm(ModelForm):
+        #     class Meta:
+        #         model = self.model_class
+        #         fields = '__all__'
+        '''第二种使用type来创建'''
+        meta = type('Meta',(object,),{'model':self.model_class,'fields':'__all__'})
+        TestModelForm = type('TestModelForm',(ModelForm,),{'Meta':meta})
+        return TestModelForm
 
 ##################3'''url相关'''############################3
 
@@ -56,23 +69,26 @@ class Oomph6Config:
         ]
         return url_patterns
 
+    def extra_url(self):
+        return []       # 这个是留着,用来自定义方法
+
     @property
     def urls(self):
         return self.get_urls()
 
-    def get_edit_url(self,nid):
+    def get_edit_url(self,nid):   # 编辑页面
         name = "oomph6:%s_%s_edit" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
         edit_url = reverse(name, args=(nid,)) # 有正则,就要加args动态反向生成url
         return edit_url
-    def get_list_url(self): # 列表页面
+    def get_list_url(self):       # 列表页面
         name = "oomph6:%s_%s_changelist" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
         edit_url = reverse(name)
         return edit_url
-    def get_add_url(self):
+    def get_add_url(self):        # 添加页面
         name = "oomph6:%s_%s_add" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
         edit_url = reverse(name)
         return edit_url
-    def get_delete_url(self,nid):
+    def get_delete_url(self,nid): # 删除页面
         name = "oomph6:%s_%s_delete" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
         edit_url = reverse(name,args=(nid,))
         return edit_url
@@ -118,25 +134,51 @@ class Oomph6Config:
 
     def add_view(self,request,*args,**kwargs):
         '''使用ModelForm来实现该视图函数'''
-        class TestModelForm(ModelForm):
-            class Meta:
-                model = self.model_class
-                fields = '__all__'
+        # class TestModelForm(ModelForm):
+        #     class Meta:
+        #         model = self.model_class
+        #         fields = '__all__'
+        # if request.method == 'GET':  # get请求使用ModelForm是生成标签
+        #     form = TestModelForm()
+        #     return render(request,'oomph6/add_view.html',{'form':form})
+        # else:                        # post请求时,是帮助验证并且.save 保存在数据库
+        #     form = TestModelForm(request.post)
+        #     if form.is_valid():
+        #         form.save()  # save()过后说明保存成功了,就需要跳转到列表页面,对不对,在不在理
+        #         return redirect(self.get_list_url())
+        #     return render(request,'oomph6/add_view.html',{'form':form})
+        model_form_class = self.get_model_form_class()
         if request.method == 'GET':
-            form = TestModelForm()
+            form = model_form_class()
             return render(request,'oomph6/add_view.html',{'form':form})
         else:
-            form = TestModelForm(request.post)
+            form = model_form_class(request.POST)
             if form.is_valid():
-                form.save()  # save()过后说明保存成功了,就需要跳转到列表页面,对不对,在不在理
+                form.save()
                 return redirect(self.get_list_url())
-            return render(request,'oomph6/add_view.html',{'form':form})
-
+            else:
+                return render(request,'oomph6/add_view.html',{'form':form})
 
     def edit_view(self,request,nid,*args,**kwargs):
-        return HttpResponse('edit_view')
+        '''根据id找数据'''
+        obj = self.model_class.objects.filter(pk=nid,).first()
+        if not obj :
+            return redirect(self.get_list_url())
+        model_form_class = self.get_model_form_class()
+        # GET 显示标签+默认值
+        if request.method == 'GET':
+            form = model_form_class(instance=obj)   # 显示默认值
+            return render(request,'oomph6/edit_view.html',{'form':form})
+        else:
+            form = model_form_class(instance=obj,data=request.POST)  # 如果不放instance的话, 和新增有什么泣别. 编辑必须加
+            if form.is_valid():
+                form.save()
+                return redirect(self.get_list_url())
+            return render(request,'oomph6/edit_view.html',{'form':form})
+
     def delete_view(self,request,nid,*args,**kwargs):
-        return HttpResponse('delete_view')
+        self.model_class.objects.filter(pk=nid).delete()
+        return redirect(self.get_list_url())
 
 
 
@@ -150,8 +192,8 @@ class Oomph6Site:
             oomph6_config_class = Oomph6Config
         self._registry[model_class] = oomph6_config_class(model_class,self) #这个self就是site
         '''
-        {models.UserInfo : Oomph6Config(models.UserInfo,site)}   这个value和oomph6_config_obj 什么关系
-                                                   是如何转换的
+        {models.UserInfo : Oomph6Config(models.UserInfo,site)}   这个value和oomph6_config_obj 什么关系?
+                    可能就是根据第一个参数的models_class来区分的
         '''
 
     def get_urls(self):
