@@ -10,6 +10,9 @@
 <div class="container">
 <h2 class="text-center">列表页面</h2>
     <table class="table table-bordered">
+    {% if show_add_btn %}
+        <a href="{{ add_url }}" class="btn btn-primary">添加</a>
+    {% endif %}
         <thead>
         <tr>
         {% for item in head_list %}

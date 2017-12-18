@@ -1,7 +1,8 @@
 from django.conf.urls import url
+from django.forms import ModelForm
 from django.shortcuts import HttpResponse,render,redirect
 from django.utils.safestring import mark_safe
-
+from django.urls import reverse
 
 class Oomph6Config:
     def __init__(self,model_class,site):
@@ -9,12 +10,13 @@ class Oomph6Config:
         self.site = site
         print('site===',site)  # site=== <oomph6.service.vv1.Oomph6Site object at 0x103e3ca20>
     '''11-37 实现默认显示 编辑,选择,删除'''
+    # 1. 定制表单列 row
     def edit(self,obj=None,is_header=False):
         # 这个obj对应for row in data_list 中的row
         # 写obj=None,是因为 表头中不需要obj,所以为了避免报错,默认为None
         if is_header:
             return '编辑'
-        return mark_safe('<a href="/edit/%s">编辑</a>'%obj.id)
+        return mark_safe('<a href="%s">编辑</a>'%self.get_edit_url(obj.id,))
 
     def checkbox(self,obj=None,is_header=False):
         if is_header:
@@ -24,7 +26,7 @@ class Oomph6Config:
     def delete(self,obj=None,is_header=False):
         if is_header:
             return '删除'
-        return mark_safe('<a href="/delete/%s">删除</a>'%obj.id)
+        return mark_safe('<a href="%s">删除</a>'%self.get_delete_url(obj.id,))
 
     list_display = []
     def get_list_display(self):
@@ -36,15 +38,21 @@ class Oomph6Config:
             data.append(Oomph6Config.delete)       # 对象调函数是方法, 类调函数 是函数
             data.insert(0,Oomph6Config.checkbox)   # 这是函数哦,不是方法,记得要手动传self
         return data
+    # 2. 是否显示添加按钮
+    show_add_btn = True
+    def get_add_btn(self):
+        return self.show_add_btn
 
+
+##################3'''url相关'''############################3
 
     def get_urls(self):
         app_model_name = self.model_class._meta.app_label,self.model_class._meta.model_name
         url_patterns = [
             url(r'^$',self.changelist_view,name='%s_%s_changelist'%(app_model_name)),
             url(r'^add/$',self.add_view,name='%s_%s_add'%(app_model_name)),
-            url(r'^delete/(\d+)/$',self.delete_view,name='%s_%s_delete'%(app_model_name)),
-            url(r'^edit/(\d+)/$',self.edit_view,name='%s_%s_edit'%(app_model_name)),
+            url(r'^(\d+)/delete/$',self.delete_view,name='%s_%s_delete'%(app_model_name)),
+            url(r'^(\d+)/edit/$',self.edit_view,name='%s_%s_edit'%(app_model_name)),
         ]
         return url_patterns
 
@@ -52,7 +60,24 @@ class Oomph6Config:
     def urls(self):
         return self.get_urls()
 
-    ################'''处理请求的方法'''###################
+    def get_edit_url(self,nid):
+        name = "oomph6:%s_%s_edit" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
+        edit_url = reverse(name, args=(nid,)) # 有正则,就要加args动态反向生成url
+        return edit_url
+    def get_list_url(self): # 列表页面
+        name = "oomph6:%s_%s_changelist" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
+        edit_url = reverse(name)
+        return edit_url
+    def get_add_url(self):
+        name = "oomph6:%s_%s_add" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
+        edit_url = reverse(name)
+        return edit_url
+    def get_delete_url(self,nid):
+        name = "oomph6:%s_%s_delete" % (self.model_class._meta.app_label, self.model_class._meta.model_name,)
+        edit_url = reverse(name,args=(nid,))
+        return edit_url
+
+################'''处理请求的方法'''###################
     def changelist_view(self,request,*args,**kwargs):
         '''
         /oomph6/app01/userinfo/           self.model_class : models.UserInfo
@@ -89,14 +114,30 @@ class Oomph6Config:
                     val = field_name(self,row)      # 第一个参数是本身自己的,第二个参数代指对象,是从41行拿的
                 temp.append(val)
             new_data_list.append(temp)
-        return render(request,'oomph6/changelist.html',{'data_list':new_data_list,'head_list':head_list})
+        return render(request,'oomph6/changelist.html',{'data_list':new_data_list,'head_list':head_list,'add_url':self.get_add_url(),'show_add_btn':self.get_add_btn()})
 
     def add_view(self,request,*args,**kwargs):
-        return HttpResponse('add_view')
+        '''使用ModelForm来实现该视图函数'''
+        class TestModelForm(ModelForm):
+            class Meta:
+                model = self.model_class
+                fields = '__all__'
+        if request.method == 'GET':
+            form = TestModelForm()
+            return render(request,'oomph6/add_view.html',{'form':form})
+        else:
+            form = TestModelForm(request.post)
+            if form.is_valid():
+                form.save()  # save()过后说明保存成功了,就需要跳转到列表页面,对不对,在不在理
+                return redirect(self.get_list_url())
+            return render(request,'oomph6/add_view.html',{'form':form})
+
+
     def edit_view(self,request,nid,*args,**kwargs):
         return HttpResponse('edit_view')
     def delete_view(self,request,nid,*args,**kwargs):
         return HttpResponse('delete_view')
+
 
 
 class Oomph6Site:
@@ -133,6 +174,6 @@ class Oomph6Site:
     @property
     def urls(self):
         # return ([],None,'oomph6')
-        return (self.get_urls(),None,None)
+        return (self.get_urls(),'oomph6',None)
 
 site = Oomph6Site()
